@@ -1,0 +1,27 @@
+apiVersion: v2
+name: vault-pki
+description: A Helm chart for deploying a highly available Vault PKI infrastructure with SoftHSM2 integration
+type: application
+version: 1.0.0
+appVersion: "1.12.1"
+home: https://www.vaultproject.io/
+icon: https://raw.githubusercontent.com/hashicorp/vault/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png
+keywords:
+  - vault
+  - pki
+  - hsm
+  - softhsm
+  - security
+  - certificates
+sources:
+  - https://github.com/hashicorp/vault
+maintainers:
+  - name: Admin
+    email: admin@example.com
+dependencies:
+  - name: cert-manager
+    version: ~1.11.0
+    repository: https://charts.jetstack.io
+    condition: cert-manager.enabled
+annotations:
+  category: Security

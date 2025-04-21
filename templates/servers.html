@@ -1,0 +1,230 @@
+{% extends "layout.html" %}
+
+{% block page_title %}Vault Servers{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Server Actions</h5>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success">
+                        Initialize Vault Cluster
+                    </button>
+                    <button class="btn btn-primary">
+                        Unseal Vault
+                    </button>
+                    <button class="btn btn-warning">
+                        Raft Snapshot
+                    </button>
+                    <button class="btn btn-danger">
+                        Seal Vault
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Vault Server Status</h5>
+                    <button class="btn btn-sm btn-outline-secondary" id="refreshServersBtn">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if vault_servers %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Server Name</th>
+                                <th>Address</th>
+                                <th>Status</th>
+                                <th>Sealed</th>
+                                <th>Version</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for server in vault_servers %}
+                            <tr>
+                                <td>{{ server.name }}</td>
+                                <td>{{ server.address }}</td>
+                                <td>
+                                    {% if server.status == 'healthy' %}
+                                    <span class="status-healthy">● Healthy</span>
+                                    {% elif server.status == 'degraded' %}
+                                    <span class="status-warning">● Degraded</span>
+                                    {% else %}
+                                    <span class="status-error">● Unhealthy</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if server.sealed %}
+                                    <span class="badge bg-danger">Sealed</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Unsealed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ server.version }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary">Details</button>
+                                        <button class="btn btn-outline-primary">Status</button>
+                                        <button class="btn btn-outline-warning">
+                                            {% if server.sealed %}
+                                            Unseal
+                                            {% else %}
+                                            Seal
+                                            {% endif %}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No Vault servers have been configured. Deploy the Vault infrastructure using the Helm chart.
+                </div>
+                <div class="mt-3">
+                    <pre class="bg-light p-3 rounded"><code>helm install vault-pki ./helm-charts/vault-pki \
+    --namespace vault \
+    --create-namespace \
+    --values ./helm-charts/vault-pki/values.yaml</code></pre>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Raft Storage Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Cluster Size:</strong> <span id="raftClusterSize">3 nodes</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Leader:</strong> <span id="raftLeader">vault-0.vault-internal</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Last Log Index:</strong> <span id="lastLogIndex">129</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Last Snapshot:</strong> <span id="lastSnapshot">2025-04-21 08:30:12 UTC</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Voters:</strong>
+                    <ul id="raftVoters">
+                        <li>vault-0</li>
+                        <li>vault-1</li>
+                        <li>vault-2</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">SoftHSM Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>PKCS#11 Provider:</strong> <span id="pkcs11Provider">SoftHSM v2.6.1</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Token Status:</strong> <span id="tokenStatus" class="status-healthy">● Initialized</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Slot:</strong> <span id="slot">1</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Token Label:</strong> <span id="tokenLabel">vault-hsm-token</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Auto-Unseal:</strong> <span id="autoUnseal" class="status-healthy">● Enabled</span>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-sm btn-outline-secondary">View Logs</button>
+                    <button class="btn btn-sm btn-outline-primary">Test Token</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize Vault Modal -->
+<div class="modal fade" id="initializeVaultModal" tabindex="-1" aria-labelledby="initializeVaultModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="initializeVaultModalLabel">Initialize Vault</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="initializeVaultForm">
+                    <div class="mb-3">
+                        <label for="keyShares" class="form-label">Key Shares</label>
+                        <input type="number" class="form-control" id="keyShares" value="5" min="1" max="10">
+                        <div class="form-text">Number of key shares to split the unseal key into</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="keyThreshold" class="form-label">Key Threshold</label>
+                        <input type="number" class="form-control" id="keyThreshold" value="3" min="1" max="10">
+                        <div class="form-text">Number of key shares required to reconstruct the master key</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="storeKeys">
+                        <label class="form-check-label" for="storeKeys">Store keys securely (development only)</label>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> Initialization can only be performed once. Make sure to securely
+                        store the unseal keys and root token that will be generated.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Initialize</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Server management specific scripts
+    document.addEventListener('DOMContentLoaded', function() {
+        // Refresh servers button handler
+        document.getElementById('refreshServersBtn').addEventListener('click', function() {
+            // This would typically make an AJAX request to refresh the server data
+            // For demo purposes, simply reload the page
+            window.location.reload();
+        });
+    });
+</script>
+{% endblock %}

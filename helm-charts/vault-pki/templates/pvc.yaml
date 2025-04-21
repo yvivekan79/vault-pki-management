@@ -1,0 +1,33 @@
+{{- if not .Values.vault.ha.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vault-pki.fullname" . }}-data
+  labels:
+    {{- include "vault-pki.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.vault.storage.raft.storageClass }}
+  storageClassName: {{ .Values.vault.storage.raft.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.vault.storage.raft.storageSize }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vault-pki.fullname" . }}-softhsm
+  labels:
+    {{- include "vault-pki.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.softhsm.storage.storageClass }}
+  storageClassName: {{ .Values.softhsm.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.softhsm.storage.size }}
+{{- end }}

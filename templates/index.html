@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Vault Server Status</h5>
+            </div>
+            <div class="card-body">
+                {% if vault_servers %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Server</th>
+                                <th>Status</th>
+                                <th>Sealed</th>
+                                <th>Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for server in vault_servers %}
+                            <tr>
+                                <td>{{ server.name }}</td>
+                                <td>
+                                    {% if server.status == 'healthy' %}
+                                    <span class="status-healthy">● Healthy</span>
+                                    {% elif server.status == 'degraded' %}
+                                    <span class="status-warning">● Degraded</span>
+                                    {% else %}
+                                    <span class="status-error">● Unhealthy</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if server.sealed %}
+                                    <span class="badge bg-danger">Sealed</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Unsealed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ server.version }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p>No Vault servers have been configured. Use the helm chart to deploy the infrastructure.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Certificate Status</h5>
+            </div>
+            <div class="card-body">
+                {% if certificates %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Common Name</th>
+                                <th>Expiration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cert in certificates %}
+                            <tr>
+                                <td>{{ cert.name }}</td>
+                                <td>{{ cert.common_name }}</td>
+                                <td>{{ cert.valid_until.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if cert.status == 'valid' %}
+                                    <span class="badge bg-success">Valid</span>
+                                    {% elif cert.status == 'expiring' %}
+                                    <span class="badge bg-warning">Expiring Soon</span>
+                                    {% elif cert.status == 'revoked' %}
+                                    <span class="badge bg-danger">Revoked</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Expired</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p>No certificates have been issued. Configure the PKI secret engine to issue certificates.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="#" class="btn btn-primary">Deploy Infrastructure</a>
+                    <a href="#" class="btn btn-secondary">Initialize Vault</a>
+                    <a href="#" class="btn btn-success">Configure PKI</a>
+                    <a href="#" class="btn btn-info">Issue Certificate</a>
+                    <a href="#" class="btn btn-warning">Rotate Root CA</a>
+                    <a href="#" class="btn btn-danger">Revoke Certificate</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Deployment Architecture</h5>
+            </div>
+            <div class="card-body">
+                <p>This Vault PKI infrastructure is deployed with high availability using Raft storage and SoftHSM integration for secure key operations.</p>
+                
+                <h6>Components:</h6>
+                <ul>
+                    <li><strong>Vault Servers:</strong> Deployed as a StatefulSet with 3 replicas for high availability</li>
+                    <li><strong>SoftHSM:</strong> Deployed as a DaemonSet to provide HSM functionality on each node</li>
+                    <li><strong>Storage:</strong> Persistent volumes for Raft storage and token data</li>
+                    <li><strong>PKI:</strong> Configured with root and intermediate CAs for certificate issuance</li>
+                </ul>
+                
+                <a href="/docs/architecture" class="btn btn-sm btn-outline-secondary">View Full Architecture</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dashboard update functions could go here
+</script>
+{% endblock %}

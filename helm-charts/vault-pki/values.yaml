@@ -1,0 +1,217 @@
+# Default values for vault-pki
+# This is a YAML-formatted file.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Vault configuration
+vault:
+  image:
+    repository: hashicorp/vault
+    tag: 1.12.1
+    pullPolicy: IfNotPresent
+  
+  # High Availability settings
+  ha:
+    enabled: true
+    replicas: 3
+    minReadySeconds: 10
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 1
+        maxSurge: 1
+  
+  # Resources for the Vault container
+  resources:
+    requests:
+      cpu: 500m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+  
+  # Storage configuration
+  storage:
+    raft:
+      enabled: true
+      storageSize: 10Gi
+      storageClass: null  # Use default storageClass if not specified
+    
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8200
+    targetPort: 8200
+    nodePort: null
+    annotations: {}
+  
+  # TLS configuration
+  tls:
+    enabled: true
+    # Secret containing the TLS certificate and key
+    secretName: vault-tls
+    # Generate self-signed certificate using cert-manager
+    certManager:
+      enabled: true
+      issuerName: vault-issuer
+      issuerKind: ClusterIssuer
+  
+  # Auto-unsealing configuration
+  autoUnseal:
+    enabled: true
+    method: "shamir"  # Options: shamir, transit, awskms, gcpkms
+    transitVaultAddress: ""
+    transitVaultRole: ""
+    transitVaultToken: ""
+    transitVaultMountPath: ""
+    kmsKeyID: ""
+    kmsRegion: ""
+  
+  # UI configuration
+  ui:
+    enabled: true
+  
+  # Network policy
+  networkPolicy:
+    enabled: false
+  
+  # Service account
+  serviceAccount:
+    create: true
+    name: null
+    annotations: {}
+  
+  # Pod security context
+  securityContext:
+    runAsUser: 100
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  # Liveness and readiness probes
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  
+  # Vault configuration
+  config:
+    listener:
+      tcp:
+        address: "[::]:8200"
+        tls_disable: false
+    api_addr: "https://$(POD_IP):8200"
+    cluster_addr: "https://$(POD_NAME).vault-pki-internal:8201"
+    ui: true
+  
+  # Additional environment variables
+  extraEnv: []
+  
+  # Additional volumes
+  extraVolumes: []
+  
+  # Additional volume mounts
+  extraVolumeMounts: []
+
+# SoftHSM2 configuration
+softhsm:
+  enabled: true
+  image:
+    repository: opendnssec/softhsm2
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Storage for HSM tokens
+  storage:
+    size: 1Gi
+    storageClass: null  # Use default storageClass if not specified
+  
+  # Security context for SoftHSM containers
+  securityContext:
+    runAsUser: 100
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  # Pin settings
+  pin:
+    userpin: "1234"
+    sopin: "87654321"
+    tokenLabel: "vault-token"
+    slots: 1
+
+# cert-manager configuration
+cert-manager:
+  enabled: true
+  installCRDs: true
+  
+  # Additional settings for cert-manager
+  # Set to false if cert-manager is already installed in the cluster
+  createClusterIssuer: true
+  
+  # ClusterIssuer configuration
+  clusterIssuer:
+    # Self-signed issuer for initial bootstrapping
+    name: vault-issuer
+    kind: ClusterIssuer
+    
+    # CA Issuer configuration (after bootstrapping)
+    caIssuer:
+      enabled: false
+      secretName: vault-ca
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: vault.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Additional pod annotations
+podAnnotations: {}
+
+# Priority class name
+priorityClassName: ""
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - vault-pki
+        topologyKey: kubernetes.io/hostname

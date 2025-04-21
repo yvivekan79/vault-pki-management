@@ -1,0 +1,317 @@
+{% extends "layout.html" %}
+
+{% block page_title %}API Documentation{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Vault PKI Management API</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    This documentation provides details on the RESTful API endpoints available for managing
+                    the Vault PKI infrastructure. These APIs can be used for automation, integration with
+                    other systems, and programmatic access to PKI functionality.
+                </p>
+                
+                <div class="alert alert-info">
+                    <strong>Base URL:</strong> <code>https://your-vault-domain.com/api/v1</code>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <strong>Authentication:</strong> All API requests require a valid token in the
+                    <code>X-Vault-Token</code> header.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <ul class="nav nav-tabs" id="apiTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="certificates-tab" data-bs-toggle="tab" data-bs-target="#certificates-content" type="button">
+                    Certificates
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="servers-tab" data-bs-toggle="tab" data-bs-target="#servers-content" type="button">
+                    Servers
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pki-tab" data-bs-toggle="tab" data-bs-target="#pki-content" type="button">
+                    PKI Operations
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content mt-3" id="apiTabsContent">
+            <!-- Certificates API -->
+            <div class="tab-pane fade show active" id="certificates-content" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">List Certificates</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>GET /certificates</code></p>
+                        <p><strong>Description:</strong> Returns a list of all certificates managed by the system.</p>
+                        
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "certificates": [
+    {
+      "id": "cert-123",
+      "name": "example-com",
+      "common_name": "example.com",
+      "issuer": "Intermediate CA",
+      "valid_from": "2025-01-01T00:00:00Z",
+      "valid_until": "2026-01-01T00:00:00Z",
+      "status": "valid"
+    },
+    {...}
+  ]
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Issue Certificate</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>POST /certificates/issue</code></p>
+                        <p><strong>Description:</strong> Issues a new certificate based on the provided parameters.</p>
+                        
+                        <h6>Request Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "role": "server",
+  "common_name": "api.example.com",
+  "alt_names": "www.example.com,example.com",
+  "ip_sans": "10.0.0.1,192.168.1.10",
+  "ttl": "8760h",
+  "key_type": "rsa",
+  "key_bits": 2048
+}</code></pre>
+
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "certificate_id": "cert-456",
+  "certificate": "-----BEGIN CERTIFICATE-----\nMIIE...",
+  "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE...",
+  "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIE..."]
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Revoke Certificate</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>POST /certificates/revoke</code></p>
+                        <p><strong>Description:</strong> Revokes a certificate based on its serial number.</p>
+                        
+                        <h6>Request Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:85:4a:a6:45:9d:be",
+  "reason": "key-compromise"
+}</code></pre>
+
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "revocation_time": "2025-04-21T10:15:30Z",
+  "status": "revoked"
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Servers API -->
+            <div class="tab-pane fade" id="servers-content" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">List Servers</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>GET /servers</code></p>
+                        <p><strong>Description:</strong> Returns a list of all Vault servers in the cluster.</p>
+                        
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "servers": [
+    {
+      "id": "server-1",
+      "name": "vault-0",
+      "address": "vault-0.vault-internal:8200",
+      "status": "healthy",
+      "sealed": false,
+      "version": "1.14.0"
+    },
+    {...}
+  ]
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Get Server Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>GET /servers/{server_id}/status</code></p>
+                        <p><strong>Description:</strong> Returns detailed status information for a specific Vault server.</p>
+                        
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "id": "server-1",
+  "name": "vault-0",
+  "address": "vault-0.vault-internal:8200",
+  "status": "healthy",
+  "sealed": false,
+  "version": "1.14.0",
+  "cluster_name": "vault-cluster",
+  "cluster_id": "vault-cluster-id-123",
+  "raft": {
+    "applied_index": 123,
+    "commit_index": 123,
+    "fsm_pending": 0,
+    "last_log_index": 123,
+    "last_log_term": 6,
+    "latest_configuration": {
+      "servers": [
+        {
+          "address": "vault-0.vault-internal:8201",
+          "node_id": "node1",
+          "suffrage": "Voter"
+        },
+        {...}
+      ]
+    },
+    "state": "Leader"
+  }
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Seal/Unseal Server</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint (Seal):</strong> <code>PUT /servers/{server_id}/seal</code></p>
+                        <p><strong>Endpoint (Unseal):</strong> <code>PUT /servers/{server_id}/unseal</code></p>
+                        <p><strong>Description:</strong> Seals or unseals a Vault server.</p>
+                        
+                        <h6>Request Example (Unseal):</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "key": "abcd1234..."
+}</code></pre>
+
+                        <h6>Response Example (Unseal):</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "sealed": false,
+  "t": 3,
+  "n": 5,
+  "progress": 0
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PKI Operations API -->
+            <div class="tab-pane fade" id="pki-content" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Get CA Certificate</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>GET /pki/ca</code></p>
+                        <p><strong>Description:</strong> Returns the CA certificate chain.</p>
+                        
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "root_ca": "-----BEGIN CERTIFICATE-----\nMIIE...",
+  "intermediate_cas": [
+    "-----BEGIN CERTIFICATE-----\nMIIE..."
+  ]
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Generate CRL</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>POST /pki/crl/rotate</code></p>
+                        <p><strong>Description:</strong> Generates a new Certificate Revocation List (CRL).</p>
+                        
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "success": true,
+  "crl_id": "crl-123",
+  "generation_time": "2025-04-21T10:30:00Z",
+  "next_update": "2025-04-28T10:30:00Z"
+}</code></pre>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Rotate Root CA</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Endpoint:</strong> <code>POST /pki/root/rotate</code></p>
+                        <p><strong>Description:</strong> Rotates the Root CA.</p>
+                        
+                        <h6>Request Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "common_name": "New Root CA",
+  "ttl": "87600h",
+  "key_type": "rsa",
+  "key_bits": 4096
+}</code></pre>
+
+                        <h6>Response Example:</h6>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "success": true,
+  "certificate_id": "root-ca-new",
+  "old_certificate_id": "root-ca-old",
+  "expiration": "2035-04-21T10:30:00Z"
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API documentation specific scripts
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up tab activation via URL hash
+        const hash = window.location.hash;
+        if (hash) {
+            const tab = document.querySelector(`a[href="${hash}"]`);
+            if (tab) {
+                tab.click();
+            }
+        }
+        
+        // Update URL hash when tabs are clicked
+        const tabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                const id = e.target.id;
+                history.pushState(null, null, `#${id}`);
+            });
+        });
+    });
+</script>
+{% endblock %}

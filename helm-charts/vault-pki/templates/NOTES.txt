@@ -1,0 +1,48 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your Vault PKI infrastructure is now being deployed!
+
+{{ if .Values.vault.ha.enabled -}}
+Vault is being deployed in HA mode with {{ .Values.vault.ha.replicas }} replicas.
+{{- else -}}
+Vault is being deployed in standalone mode.
+{{- end }}
+
+{{ if .Values.softhsm.enabled -}}
+SoftHSM2 is configured and integrated with Vault for secure key storage.
+{{- end }}
+
+1. Get the Vault service URL by running these commands:
+{{- if .Values.ingress.enabled }}
+  {{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+  {{- end }}
+{{- else if contains "NodePort" .Values.vault.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "vault-pki.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo https://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.vault.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "vault-pki.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "vault-pki.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo https://$SERVICE_IP:{{ .Values.vault.service.port }}
+{{- else if contains "ClusterIP" .Values.vault.service.type }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "vault-pki.fullname" . }} {{ .Values.vault.service.port }}:{{ .Values.vault.service.port }}
+  echo "Visit https://127.0.0.1:{{ .Values.vault.service.port }} to access Vault"
+{{- end }}
+
+2. Initialize Vault (if this is a new installation):
+   kubectl exec -ti {{ include "vault-pki.fullname" . }}-0 -- vault operator init
+
+3. For automatic initialization and setup, use the provided initialization script:
+   ./scripts/init-vault.sh
+
+4. Configure the PKI backend using the setup script:
+   ./scripts/configure-pki.sh
+
+NOTES:
+- Remember to securely store the unseal keys and root token that are generated during initialization
+- For additional configuration options and troubleshooting, refer to the documentation in the /docs directory
+- Consider setting up auto-unsealing for production environments

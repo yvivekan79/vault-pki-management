@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vault-pki.fullname" . }}-config
+  labels:
+    {{- include "vault-pki.labels" . | nindent 4 }}
+data:
+  vault-config.hcl: |-
+    ui = {{ .Values.vault.ui.enabled }}
+
+    listener "tcp" {
+      address = "[::]:8200"
+      cluster_address = "[::]:8201"
+      {{- if .Values.vault.tls.enabled }}
+      tls_disable = false
+      tls_cert_file = "/vault/tls/tls.crt"
+      tls_key_file = "/vault/tls/tls.key"
+      {{- else }}
+      tls_disable = true
+      {{- end }}
+    }
+
+    {{- if .Values.vault.storage.raft.enabled }}
+    storage "raft" {
+      path = "/vault/data"
+      node_id = "${POD_NAME}"
+      
+      retry_join {
+        leader_api_addr = "https://{{ include "vault-pki.fullname" . }}-0.{{ include "vault-pki.fullname" . }}-internal:8200"
+        leader_tls_servername = "{{ include "vault-pki.fullname" . }}"
+        leader_ca_cert_file = "/vault/tls/ca.crt"
+        leader_client_cert_file = "/vault/tls/tls.crt"
+        leader_client_key_file = "/vault/tls/tls.key"
+      }
+    }
+    {{- else }}
+    storage "file" {
+      path = "/vault/data"
+    }
+    {{- end }}
+
+    seal "pkcs11" {
+      lib = "/usr/lib/softhsm/libsofthsm2.so"
+      slot = "0"
+      pin = "{{ .Values.softhsm.pin.userpin }}"
+      key_label = "vault-hsm-key"
+      hmac_key_label = "vault-hsm-hmac-key"
+    }
+
+    api_addr = "https://{{ include "vault-pki.fullname" . }}.{{ .Release.Namespace }}.svc:8200"
+    cluster_addr = "https://${POD_NAME}.{{ include "vault-pki.fullname" . }}-internal:8201"
+
+    log_level = "info"
+    
+    disable_mlock = true
+    
+    # Enable telemetry for monitoring
+    telemetry {
+      statsd_address = "localhost:9125"
+      disable_hostname = true
+    }
+
+  softhsm2.conf: |-
+    # SoftHSM v2 configuration file
+
+    directories.tokendir = /softhsm/tokens/
+    objectstore.backend = file
+
+    # Log level
+    log.level = INFO
+
+    # Slot settings
+    slots.removable = false
+
+    # Security settings
+    slots.mechanisms = ALL
+
+    # The SO PIN and user PIN
+    # WARNING: These pins are stored in plain text in this configuration file
+    # In production, consider using a more secure method to provide these pins
+    pins.so = {{ .Values.softhsm.pin.sopin }}
+    pins.user = {{ .Values.softhsm.pin.userpin }}
