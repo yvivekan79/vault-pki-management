@@ -17,12 +17,22 @@
                 </p>
                 
                 <div class="alert alert-info">
-                    <strong>Base URL:</strong> <code>https://your-vault-domain.com/api/v1</code>
+                    <strong>Base URL:</strong> <code>http://your-server:5000/api/v1</code>
                 </div>
                 
                 <div class="alert alert-warning">
-                    <strong>Authentication:</strong> All API requests require a valid token in the
-                    <code>X-Vault-Token</code> header.
+                    <strong>Authentication:</strong> For production environments, authentication would typically be implemented.
+                    However, in this demo version, no authentication is required for simplicity.
+                </div>
+
+                <div class="mt-4">
+                    <h5>Client Examples</h5>
+                    <p>We provide client examples to help you get started with using our API:</p>
+                    <ul>
+                        <li><strong>Python Client:</strong> A comprehensive Python client for interacting with the API.</li>
+                        <li><strong>Shell Script:</strong> A Bash script demonstrating API usage with curl.</li>
+                    </ul>
+                    <p>View the example code in the <code>client_examples</code> directory of the repository.</p>
                 </div>
             </div>
         </div>

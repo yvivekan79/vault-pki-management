@@ -139,7 +139,7 @@ def list_servers():
     return render_template('servers.html', servers=servers)
 
 # API routes
-@app.route('/api/certificates', methods=['GET'])
+@app.route('/api/v1/certificates', methods=['GET'])
 def api_certificates():
     certs = Certificate.query.all()
     result = []
@@ -151,11 +151,93 @@ def api_certificates():
             'issuer': cert.issuer,
             'valid_from': cert.valid_from.isoformat(),
             'valid_until': cert.valid_until.isoformat(),
-            'status': cert.status
+            'status': cert.status,
+            'created_at': cert.created_at.isoformat() if cert.created_at else None
         })
     return jsonify(certificates=result)
 
-@app.route('/api/servers', methods=['GET'])
+@app.route('/api/v1/certificates/<int:certificate_id>', methods=['GET'])
+def get_certificate(certificate_id):
+    cert = Certificate.query.get_or_404(certificate_id)
+    return jsonify({
+        'id': cert.id,
+        'name': cert.name,
+        'common_name': cert.common_name,
+        'issuer': cert.issuer,
+        'valid_from': cert.valid_from.isoformat(),
+        'valid_until': cert.valid_until.isoformat(),
+        'status': cert.status,
+        'created_at': cert.created_at.isoformat() if cert.created_at else None
+    })
+
+@app.route('/api/v1/certificates/issue', methods=['POST'])
+def issue_certificate():
+    data = request.json
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    required_fields = ['common_name', 'ttl', 'role']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    
+    # In a real implementation, this would call the Vault API to issue a certificate
+    # For now, we'll simulate it by creating a record in our database
+    from datetime import datetime, timedelta
+    
+    # Parse TTL (assumed format like "8760h" for 1 year)
+    ttl_str = data.get('ttl', '8760h')
+    ttl_value = int(ttl_str.rstrip('h'))
+    ttl_hours = ttl_value
+    
+    # Create a new certificate record
+    now = datetime.now()
+    new_cert = Certificate(
+        name=data.get('name', f"{data['common_name'].replace('.', '-')}-{now.strftime('%Y%m%d')}"),
+        common_name=data['common_name'],
+        issuer="Vault Intermediate CA",
+        valid_from=now,
+        valid_until=now + timedelta(hours=ttl_hours),
+        status="valid"
+    )
+    
+    db.session.add(new_cert)
+    db.session.commit()
+    
+    # In a real implementation, this would return the actual certificate data
+    return jsonify({
+        'success': True,
+        'certificate_id': new_cert.id,
+        'certificate': {
+            'id': new_cert.id,
+            'name': new_cert.name,
+            'common_name': new_cert.common_name,
+            'issuer': new_cert.issuer,
+            'valid_from': new_cert.valid_from.isoformat(),
+            'valid_until': new_cert.valid_until.isoformat(),
+            'status': new_cert.status
+        },
+        'message': 'Certificate issued successfully. In a production environment, this would return the actual certificate data.'
+    }), 201
+
+@app.route('/api/v1/certificates/<int:certificate_id>/revoke', methods=['POST'])
+def revoke_certificate(certificate_id):
+    cert = Certificate.query.get_or_404(certificate_id)
+    
+    # In a real implementation, this would call the Vault API to revoke the certificate
+    # For now, we'll simulate it by updating the record in our database
+    cert.status = "revoked"
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'certificate_id': cert.id,
+        'status': 'revoked',
+        'message': 'Certificate revoked successfully'
+    })
+
+@app.route('/api/v1/servers', methods=['GET'])
 def api_servers():
     servers = VaultServer.query.all()
     result = []
@@ -166,9 +248,45 @@ def api_servers():
             'address': server.address,
             'status': server.status,
             'sealed': server.sealed,
-            'version': server.version
+            'version': server.version,
+            'last_checked': server.last_checked.isoformat() if server.last_checked else None
         })
     return jsonify(servers=result)
+
+@app.route('/api/v1/servers/<int:server_id>', methods=['GET'])
+def get_server(server_id):
+    server = VaultServer.query.get_or_404(server_id)
+    return jsonify({
+        'id': server.id,
+        'name': server.name,
+        'address': server.address,
+        'status': server.status,
+        'sealed': server.sealed,
+        'version': server.version,
+        'last_checked': server.last_checked.isoformat() if server.last_checked else None
+    })
+
+@app.route('/api/v1/servers/<int:server_id>/unseal', methods=['POST'])
+def unseal_server(server_id):
+    server = VaultServer.query.get_or_404(server_id)
+    
+    # In a real implementation, this would call the Vault API to unseal the server
+    # For now, we'll simulate it by updating the record in our database
+    if not server.sealed:
+        return jsonify({
+            'success': False,
+            'message': 'Server is already unsealed'
+        }), 400
+    
+    server.sealed = False
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'server_id': server.id,
+        'sealed': False,
+        'message': 'Server unsealed successfully'
+    })
 
 @app.route('/health')
 def health():
